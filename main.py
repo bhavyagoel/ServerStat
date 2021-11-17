@@ -1,12 +1,10 @@
 from stats import *
-import sys
-import asyncio
 import telebot
-import os
-import subprocess
 import time
 import schedule
 import time
+from pymongo import MongoClient
+import os
 
 
 '''Reply Messages'''
@@ -24,7 +22,7 @@ BOT_HELP = "Commands:\n" \
            "/proc_list - returns process list\n" \
            "/graph - return usage graph for specified minutes\n" \
            "/cron - initialise a cron process to deliver usage graphs\n" \
-    "/stop - stops all the scheduled cron tabs\n"
+           "/stop - stops all the scheduled cron tabs\n"
 
 
 def read_json(file):
@@ -34,6 +32,22 @@ def read_json(file):
 
 data = read_json('config.json')
 tb = telebot.TeleBot(data['token'], parse_mode=None)
+
+# config = {
+#     "username": "root",
+#     "password": "password",
+#     "server": "mongo",
+# }
+
+# connector = "mongodb://{}:{}@{}".format(config["username"], config["password"], config["server"])
+# client = MongoClient(connector)
+# client = MongoClient(os.environ["DB_PORT_27017_TCP_ADDR"], 27017)
+# client = MongoClient(os.environ.get('MONGODB_HOST', 'localhost'), port=27017)
+client = MongoClient(
+    'mongodb://mongo/test')
+
+# client = MongoClient('mongodb://mongo')
+db = client["serverStat"]
 
 
 @tb.message_handler(commands=['info'])
@@ -134,6 +148,8 @@ def send_help(message):
 def get_cpu_usage(message):
     try:
         usage = cpu_usage()
+        db.cpu_usage.insert_one(usage)
+        tb.send_message(message.chat.id, "CPU Usage saved to MongoDB")
         msg = message.text.split(' ')
         if message.text.find('-p') != -1:
             tb.send_message(
@@ -177,6 +193,8 @@ def get_cpu_usage(message):
 def get_mem_usage(message):
     try:
         usage = memory_usage()
+        tb.send_message(message.chat.id, "Memory Usage saved to MongoDB")
+        db.mem_usage.insert_one(usage)
         msg = message.text.split(' ')
         if message.text.find('-v') != -1:
             tb.send_message(message.chat.id, "Virutal Memory")
@@ -206,6 +224,8 @@ def get_mem_usage(message):
 def get_disk_usage(message):
     try:
         usage = disk_usage()
+        tb.send_message(message.chat.id, "Disk Usage saved to MongoDB")
+        db.disk_usage.insert_one(usage)
         if message.text.find('-p') != -1:
             tb.send_message(message.chat.id, "Disk Partitions")
             for partition in usage['disk_partitions']:
@@ -239,6 +259,8 @@ def get_disk_usage(message):
 def get_net_usage(message):
     try:
         usage = network_usage()
+        tb.send_message(message.chat.id, "Network Usage saved to MongoDB")
+        db.net_usage.insert_one(usage)
         if message.text.find('-io') != -1:
             tb.send_message(message.chat.id, "Network IO Counters \n {}".format(
                 usage['net_io_counters']))
@@ -268,6 +290,8 @@ def get_net_usage(message):
 def get_proc_usage(message):
     try:
         usage = process_usage()
+        tb.send_message(message.chat.id, "Process Usage saved to MongoDB")
+        db.proc_usage.insert_one(usage)
         if message.text.find('-pid') == -1:
             tb.send_message(message.chat.id, "Process ID not provided")
         else:
