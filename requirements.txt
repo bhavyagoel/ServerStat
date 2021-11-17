@@ -1,0 +1,7 @@
+psutil 
+pymongo 
+schedule
+pyTelegramBotAPI
+numpy 
+matplotlib 
+pandas
